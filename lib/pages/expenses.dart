@@ -30,11 +30,10 @@ class _ExpensesState extends State<Expensesp> {
   }
 
   Future<void> _deleteTransaction(int index) async {
-    transactions.removeAt(index); // Remove the transaction from the list
+    transactions.removeAt(index);
     final prefs = await SharedPreferences.getInstance();
-    // Update the stored transactions in SharedPreferences
     await prefs.setString('transactions', json.encode(transactions));
-    setState(() {}); // Update the UI
+    setState(() {});
   }
 
   @override

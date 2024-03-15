@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart'; // Make sure to add intl package in your pubspec.yaml for this
+import 'package:intl/intl.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
@@ -14,7 +14,7 @@ class _AddTransactionFormState extends State<AddTransactionForm> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _dateController = TextEditingController();
-  String _selectedCategory = 'Shopping'; // Default or initial category
+  String _selectedCategory = 'Shopping';
   List<String> _categories = [
     'Shopping',
     'Tranport',
@@ -22,7 +22,7 @@ class _AddTransactionFormState extends State<AddTransactionForm> {
     'Health',
     'Utilitis',
     'Other'
-  ]; // Example categories
+  ];
   DateTime _selectedDate = DateTime.now();
 
   @override
@@ -70,8 +70,7 @@ class _AddTransactionFormState extends State<AddTransactionForm> {
       transactions.add(newTransaction);
 
       await prefs.setString('transactions', json.encode(transactions));
-      Navigator.of(context)
-          .pop(); // Make sure this doesn't cause the screen to go black unexpectedly
+      Navigator.of(context).pop();
     } else {
       showDialog(
         context: context,
@@ -138,7 +137,7 @@ class _AddTransactionFormState extends State<AddTransactionForm> {
                       onPressed: () => _selectDate(context),
                     ),
                   ),
-                  readOnly: true, // Prevent manual editing
+                  readOnly: true,
                   onTap: () => _selectDate(context),
                 ),
                 DropdownButtonFormField(
