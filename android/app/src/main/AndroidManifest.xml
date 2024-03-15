@@ -1,4 +1,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+   <!-- For Android 12 and below -->
+
+<!-- For Android 13 and above, if you need access to media files -->
+<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+<uses-permission android:name="android.permission.WRITE_EXTERNAL_sTORAGE"/>
+
+>
+
     <application
         android:label="expense_tracker"
         android:name="${applicationName}"
