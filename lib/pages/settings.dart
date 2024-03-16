@@ -21,75 +21,83 @@ class Settings extends WidgetWithTitle {
 
   @override
   Widget build(BuildContext context) {
-    return CupertinoPageScaffold(
-      navigationBar: const CupertinoNavigationBar(
-        backgroundColor: Color.fromARGB(0, 10, 0, 0),
-        middle: Text("Settings"),
-      ),
-      child: SafeArea(
-        left: true,
-        top: true,
-        right: true,
-        bottom: true,
-        child: Container(
-          width: double.infinity,
-          height: double.infinity,
-          transformAlignment: Alignment.center,
-          child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: const Color.fromARGB(255, 28, 28, 30),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: CupertinoFormSection.insetGrouped(children: [
-                ...List.generate(
-                    items.length,
-                    (index) => GestureDetector(
-                        onTap: () {
-                          switch (index) {
-                            case 0:
-                              Navigator.push(
-                                  context,
-                                  CupertinoPageRoute(
-                                      builder: (context) =>
-                                          const Categories()));
-                              break;
-                            case 1:
-                              /* showAlertDialog(
-                                context,
-                                () {
-                                  realm.write(() {
-                                    realm.deleteAll<Expense>();
-                                    realm.deleteAll<Category>();
-                                  });
-                                },
-                                "Are you sure?",
-                                "This action cannot be undone.",
-                                "Erase data",
-                              ); */
-                              break;
-                          }
-                        },
-                        child: DecoratedBox(
-                          decoration: const BoxDecoration(),
-                          child: CupertinoFormRow(
-                            prefix: Text(items[index].label,
-                                style: TextStyle(
-                                    color: items[index].isDestructive
-                                        ? const Color.fromARGB(255, 255, 69, 58)
-                                        : const Color.fromARGB(255, 0, 0, 0))),
-                            helper: null,
-                            padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-                            child: items[index].isDestructive
-                                ? Container()
-                                : const Icon(
-                                    Icons.add_box_rounded,
-                                    size: 50,
-                                  ),
-                          ),
-                        )))
-              ])),
-        ),
-      ),
+    return Container(
+      width: double.infinity,
+      height: 147,
+      transformAlignment: Alignment.center,
+      child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: const Color.fromARGB(255, 28, 28, 30),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: CupertinoFormSection.insetGrouped(children: [
+            ...List.generate(
+                items.length,
+                (index) => GestureDetector(
+                    onTap: () {
+                      switch (index) {
+                        case 0:
+                          Navigator.push(
+                              context,
+                              CupertinoPageRoute(
+                                  builder: (context) => const Categories()));
+                          break;
+                        case 1:
+                          _showAlertDialog(context);
+                          break;
+                      }
+                    },
+                    child: DecoratedBox(
+                      decoration: const BoxDecoration(),
+                      child: CupertinoFormRow(
+                        prefix: Text(items[index].label,
+                            style: TextStyle(
+                                color: items[index].isDestructive
+                                    ? Colors.red
+                                    : Colors.black)),
+                        helper: null,
+                        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+                        child: items[index].isDestructive
+                            ? Container()
+                            : const Icon(
+                                Icons.keyboard_arrow_right_sharp,
+                                size: 40,
+                              ),
+                      ),
+                    )))
+          ])),
     );
   }
+}
+
+// This shows a CupertinoModalPopup which hosts a CupertinoAlertDialog.
+void _showAlertDialog(BuildContext context) {
+  showCupertinoModalPopup<void>(
+    context: context,
+    builder: (BuildContext context) => CupertinoAlertDialog(
+      title: const Text('Are you sure?'),
+      content: const Text('This action cannot be undone.'),
+      actions: <CupertinoDialogAction>[
+        CupertinoDialogAction(
+          /// This parameter indicates this action is the default,
+          /// and turns the action's text to bold text.
+          isDefaultAction: true,
+          onPressed: () {
+            Navigator.pop(context);
+          },
+          child: const Text('Cancel'),
+        ),
+        CupertinoDialogAction(
+          /// This parameter indicates the action would perform
+          /// a destructive action such as deletion, and turns
+          /// the action's text color to red.
+          isDestructiveAction: true,
+          onPressed: () {
+            Navigator.pop(context);
+          },
+          child: const Text('Erase data'),
+        ),
+      ],
+    ),
+  );
 }
