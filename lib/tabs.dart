@@ -1,32 +1,13 @@
-import 'package:flutter/material.dart';
-import 'package:expense_tracker/pages/add.dart';
-import 'package:expense_tracker/pages/expenses.dart';
-import 'package:expense_tracker/pages/goals.dart';
-import 'package:expense_tracker/pages/reports.dart';
-import 'package:expense_tracker/pages/settings.dart';
-
-void main() {
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Expense Tracker',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSwatch(primarySwatch: Colors.blueGrey),
-        useMaterial3: true,
-      ),
-      home: const TabsController(),
-    );
-  }
-}
+import 'package:flutter/cupertino.dart';
+import './pages/expenses.dart';
+import './pages/reports.dart';
+import './pages/add.dart';
+import './pages/settings.dart';
+import './types/widgets.dart';
+import 'pages/add_goals.dart';
 
 class TabsController extends StatefulWidget {
-  const TabsController({Key? key}) : super(key: key);
+  const TabsController({super.key});
 
   @override
   State<TabsController> createState() => _TabsControllerState();
@@ -35,41 +16,56 @@ class TabsController extends StatefulWidget {
 class _TabsControllerState extends State<TabsController> {
   var _selectedIndex = 0;
 
+  static const List<WidgetWithTitle> _pages = [
+    Expenses(),
+    Reports(),
+    Add(),
+    AddGoals(),
+    Settings(),
+  ];
+
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
     });
   }
 
-  static List<Widget> _pages = [
-    Expensesp(),
-    Reports(),
-    AddTransactionForm(),
-    Goals(),
-    Settings(),
-  ];
-
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(_pages[_selectedIndex].toStringShort()),
-      ),
-      body: _pages[_selectedIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(icon: Icon(Icons.paid), label: "Home"),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.bar_chart), label: "Reports"),
-          BottomNavigationBarItem(icon: Icon(Icons.add), label: "Add"),
-          BottomNavigationBarItem(icon: Icon(Icons.list_alt), label: "Goals"),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.settings), label: "Settings"),
-        ],
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-        type: BottomNavigationBarType.fixed,
-      ),
-    );
+    return CupertinoTabScaffold(
+        tabBar: CupertinoTabBar(
+          backgroundColor: Color.fromARGB(255, 48, 69, 112),
+          items: const <BottomNavigationBarItem>[
+            BottomNavigationBarItem(
+              icon: Icon(CupertinoIcons.tray_arrow_up),
+              label: 'Expenses',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(CupertinoIcons.chart_bar_fill),
+              label: 'Reports',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(CupertinoIcons.add),
+              label: 'Add',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(CupertinoIcons.add_circled_solid),
+              label: 'Goals',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(CupertinoIcons.gear_solid),
+              label: 'Settings',
+            ),
+          ],
+          currentIndex: _selectedIndex,
+          onTap: _onItemTapped,
+        ),
+        tabBuilder: (BuildContext context, int index) {
+          return CupertinoTabView(
+            builder: (BuildContext context) {
+              return _pages[index];
+            },
+          );
+        });
   }
 }
