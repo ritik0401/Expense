@@ -1,95 +1,253 @@
-import 'package:flutter/material.dart';
-import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:fl_chart/fl_chart.dart';
+// ignore_for_file: library_private_types_in_public_api
 
-class Reports extends StatefulWidget {
+import 'dart:async';
+import 'package:flutter/cupertino.dart';
+import '../components/charts/monthly_chart.dart';
+import '../components/charts/weekly_chart.dart';
+import '../components/charts/yearly_chart.dart';
+import '../components/expenses_list.dart';
+import '../constants.dart';
+import '../extensions/date_extensions.dart';
+import '../extensions/expenses_extensions.dart';
+import '../extensions/number_extensions.dart';
+import '../models/expense.dart';
+import '../realm.dart';
+import '../types/period.dart';
+import '../utils/picker_utils.dart';
+import 'package:realm/realm.dart';
+
+import '../types/widgets.dart';
+
+class Reports extends WidgetWithTitle {
+  const Reports({super.key}) : super(title: "Reports");
+
   @override
-  _ReportsPageState createState() => _ReportsPageState();
+  Widget build(BuildContext context) {
+    return const ReportsContent();
+  }
 }
 
-class _ReportsPageState extends State<Reports> {
-  late List<Map<String, dynamic>> transactions;
+class ReportsContent extends StatefulWidget {
+  const ReportsContent({super.key});
+
+  @override
+  _ReportsContent createState() => _ReportsContent();
+}
+
+class _ReportsContent extends State<ReportsContent> {
+  final PageController _controller = PageController(initialPage: 0);
+  set _currentPage(int value) {
+    setStateValues(value);
+  }
+
+  double _spentInPeriod = 0;
+  double _avgPerDay = 0;
+
+  StreamSubscription<RealmResultsChanges<Expense>>? _expensesSub;
+  var realmExpenses = realm.all<Expense>();
+  List<Expense> _expenses = [];
+
+  DateTime _startDate = DateTime.now();
+  DateTime _endDate = DateTime.now();
+  int get _numberOfPages {
+    switch (periods[_selectedPeriodIndex]) {
+      case Period.day:
+        return 365; // not used
+      case Period.week:
+        return 53;
+      case Period.month:
+        return 12;
+      case Period.year:
+        return 1;
+    }
+  }
+
+  int _periodIndex = 1;
+  int get _selectedPeriodIndex => _periodIndex;
+  set _selectedPeriodIndex(int value) {
+    _periodIndex = value;
+    setStateValues(0);
+    _controller.jumpToPage(0);
+  }
 
   @override
   void initState() {
     super.initState();
-    transactions = [];
-    _loadTransactions();
+    setStateValues(0);
   }
 
-  Future<void> _loadTransactions() async {
-    final prefs = await SharedPreferences.getInstance();
-    final String? transactionsString = prefs.getString('transactions');
-    if (transactionsString != null) {
-      setState(() {
-        transactions =
-            List<Map<String, dynamic>>.from(json.decode(transactionsString));
-      });
-    }
+  void setStateValues(int page) {
+    var filterResults = realmExpenses
+        .toList()
+        .filterByPeriod(periods[_selectedPeriodIndex], page);
+
+    var expenses = filterResults[0] as List<Expense>;
+    var start = filterResults[1] as DateTime;
+    var end = filterResults[2] as DateTime;
+    var numOfDays = end.difference(start).inDays;
+
+    setState(() {
+      _expenses = expenses;
+      _startDate = start;
+      _endDate = end;
+      _spentInPeriod = expenses.sum();
+      _avgPerDay = _spentInPeriod / numOfDays;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Reports'),
-      ),
-      body: transactions.isNotEmpty
-          ? Center(
-              child: PieChart(
-                PieChartData(
-                  sections: _getSections(),
-                  centerSpaceRadius: 40,
-                  sectionsSpace: 2,
-                ),
+    _expensesSub ??= realmExpenses.changes.listen((changes) {
+      setStateValues(_controller.page!.toInt());
+    });
+
+    return CupertinoPageScaffold(
+      // Nav Bar
+      navigationBar: CupertinoNavigationBar(
+        backgroundColor: const Color.fromARGB(0, 0, 0, 0),
+        middle: const Text("Reports"),
+        trailing: CupertinoButton(
+          child: const Icon(CupertinoIcons.calendar),
+          onPressed: () => showPicker(
+            context,
+            CupertinoPicker(
+              scrollController: FixedExtentScrollController(
+                initialItem: _selectedPeriodIndex - 1,
               ),
-            )
-          : Center(child: Text('No data available')),
+              magnification: 1,
+              squeeze: 1.2,
+              useMagnifier: false,
+              itemExtent: kItemExtent,
+              // This is called when selected item is changed.
+              onSelectedItemChanged: (int selectedItem) {
+                setState(() {
+                  _selectedPeriodIndex = selectedItem + 1;
+                });
+              },
+              children: List<Widget>.generate(periods.length - 1, (int index) {
+                return Center(
+                  child: Text(periods[index + 1].name),
+                );
+              }),
+            ),
+          ),
+        ),
+      ),
+      child: SafeArea(
+        left: true,
+        top: true,
+        right: true,
+        bottom: true,
+        child: PageView.builder(
+          controller: _controller,
+          onPageChanged: (newPage) => _currentPage = newPage,
+          itemCount: _numberOfPages,
+          reverse: true,
+          itemBuilder: (context, index) {
+            return Container(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "${_startDate.shortDate} - ${_endDate.shortDate}",
+                            style: const TextStyle(fontSize: 20),
+                          ),
+                          Container(
+                            margin: const EdgeInsets.only(top: 8),
+                            child: Row(
+                              children: [
+                                const Text(
+                                  "USD ",
+                                  style: TextStyle(
+                                    color: Color.fromARGB(255, 126, 120, 120),
+                                  ),
+                                ),
+                                Text(
+                                  _spentInPeriod.removeDecimalZeroFormat(),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          const Text(
+                            "Avg/day",
+                            style: TextStyle(fontSize: 20),
+                          ),
+                          Container(
+                            margin: const EdgeInsets.only(top: 8),
+                            child: Row(
+                              children: [
+                                const Text(
+                                  "USD ",
+                                  style: TextStyle(
+                                    color: CupertinoColors.inactiveGray,
+                                  ),
+                                ),
+                                Text(
+                                  _avgPerDay.removeDecimalZeroFormat(),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  (() {
+                    switch (_selectedPeriodIndex) {
+                      case 1:
+                        return WeeklyChart(expenses: _expenses.groupWeekly());
+                      case 2:
+                        return MonthlyChart(
+                          expenses: _expenses,
+                          startDate: _startDate,
+                          endDate: _endDate,
+                        );
+                      case 3:
+                        return YearlyChart(expenses: _expenses);
+                      default:
+                        return const Text("");
+                    }
+                  }()),
+                  (() {
+                    if (_expenses.isEmpty) {
+                      return const Text("No data for selected period!");
+                    } else {
+                      return Expanded(
+                        child: ExpensesList(
+                          expenses: _expenses,
+                        ),
+                      );
+                    }
+                  }()),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
     );
   }
 
-  List<PieChartSectionData> _getSections() {
-    Map<String, double> categoryTotals = {};
-    transactions.forEach((transaction) {
-      String category = transaction['category'];
-      double amount = double.parse(transaction['amount']);
-      if (categoryTotals.containsKey(category)) {
-        categoryTotals[category] = categoryTotals[category]! + amount;
-      } else {
-        categoryTotals[category] = amount;
-      }
-    });
-
-    List<PieChartSectionData> sections = [];
-    var colors = [
-      Colors.red,
-      Colors.blue,
-      Colors.green,
-      Colors.yellow,
-      Colors.purple
-    ];
-    int colorIndex = 0;
-
-    categoryTotals.forEach((category, total) {
-      final color = colors[colorIndex % colors.length];
-      sections.add(
-        PieChartSectionData(
-          color: color,
-          value: total,
-          title:
-              '${category.substring(0, 1).toUpperCase()}${category.substring(1)}: \$${total.toStringAsFixed(2)}',
-          radius: 50,
-          titleStyle: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: const Color(0xffffffff),
-          ),
-        ),
-      );
-      colorIndex++;
-    });
-
-    return sections;
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 }

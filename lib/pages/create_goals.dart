@@ -3,33 +3,38 @@ import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flex_color_picker/flex_color_picker.dart';
 
-import '../models/category.dart';
+import '../models/goal.dart';
 import '../realm.dart';
 import '../utils/destructive_prompt.dart';
 
-class Categories extends StatefulWidget {
-  const Categories({super.key});
+class GoalsCreate extends StatefulWidget {
+  const GoalsCreate({super.key});
   @override
-  _CategoriesState createState() => _CategoriesState();
+  _GoalsCreateState createState() => _GoalsCreateState();
 }
 
-class _CategoriesState extends State<Categories> {
+class _GoalsCreateState extends State<GoalsCreate> {
   Color pickerColor = const Color(0xff443a49);
-  Color currentColor = const Color(0xff443a49);
-  List<Category> categories = [];
+  Color currentColor = Color.fromARGB(255, 188, 177, 194);
+  List<Goal> goals = [];
 
   late TextEditingController _textController;
+  late TextEditingController _amountController;
 
   @override
   void initState() {
     super.initState();
     _textController = TextEditingController(text: '');
-    categories = realm.all<Category>().toList();
+    _amountController = TextEditingController();
+
+    goals = realm.all<Goal>().toList();
   }
 
   @override
   void dispose() {
     _textController.dispose();
+    _amountController.dispose();
+
     super.dispose();
   }
 
@@ -37,11 +42,15 @@ class _CategoriesState extends State<Categories> {
     setState(() => pickerColor = color);
   }
 
-  void createCategory() {
-    var newCategory = realm.write<Category>(
-        () => realm.add(Category(_textController.text, pickerColor.value)));
-    setState(() => categories.add(newCategory));
+  void createGoal() {
+    var newGoal = realm.write<Goal>(() => realm.add(Goal(
+        _textController.text,
+        pickerColor.value,
+        double.parse(_amountController.value.text),
+        double.parse(_amountController.value.text))));
+    setState(() => goals.add(newGoal));
     _textController.clear();
+    _amountController.clear();
   }
 
   @override
@@ -50,7 +59,7 @@ class _CategoriesState extends State<Categories> {
         navigationBar: CupertinoNavigationBar(
           leading: CupertinoNavigationBarBackButton(
               onPressed: () => Navigator.pop(context)),
-          middle: const Text("Categories",
+          middle: const Text("Goals",
               style: TextStyle(color: Color.fromARGB(255, 0, 0, 0))),
           backgroundColor: Color.fromARGB(255, 255, 255, 255),
         ),
@@ -61,16 +70,16 @@ class _CategoriesState extends State<Categories> {
           padding: const EdgeInsets.fromLTRB(0, 16, 0, 16),
           color: Color.fromARGB(255, 255, 255, 255),
           child: Column(children: [
-            categories.isNotEmpty
+            goals.isNotEmpty
                 ? Expanded(
                     child: CupertinoFormSection.insetGrouped(children: [
                       ...List.generate(
-                        categories.length,
+                        goals.length,
                         (index) => GestureDetector(
                           child: DecoratedBox(
                             decoration: const BoxDecoration(),
                             child: Dismissible(
-                              key: Key(categories[index].name),
+                              key: Key(goals[index].name),
                               confirmDismiss: (_) {
                                 var confirmer = Completer<bool>();
                                 showAlertDialog(
@@ -80,7 +89,7 @@ class _CategoriesState extends State<Categories> {
                                   },
                                   "Are you sure?",
                                   "This action cannot be undone.",
-                                  "Delete ${categories[index].name} category",
+                                  "Delete ${goals[index].name} category",
                                   cancellationCallback: () {
                                     confirmer.complete(false);
                                   },
@@ -90,9 +99,8 @@ class _CategoriesState extends State<Categories> {
                               },
                               onDismissed: (_) {
                                 setState(() {
-                                  realm.write(
-                                      () => realm.delete(categories[index]));
-                                  categories.removeAt(index);
+                                  realm.write(() => realm.delete(goals[index]));
+                                  goals.removeAt(index);
                                 });
                               },
                               background: Container(
@@ -112,10 +120,12 @@ class _CategoriesState extends State<Categories> {
                                         margin: const EdgeInsets.fromLTRB(
                                             0, 0, 8, 0),
                                         decoration: BoxDecoration(
-                                          color: categories[index].color,
+                                          color: goals[index].color,
                                           shape: BoxShape.circle,
                                         )),
-                                    Text(categories[index].name),
+                                    Text("Name: ${goals[index].name} "),
+                                    Text("Total: ${goals[index].amount} "),
+                                    Text("Left: ${goals[index].savedTot}"),
                                   ]),
                                   helper: null,
                                   padding:
@@ -130,7 +140,7 @@ class _CategoriesState extends State<Categories> {
                 : Expanded(
                     child: Container(
                       margin: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-                      child: const Text("No categories yet",
+                      child: const Text("No Goals yet",
                           style:
                               TextStyle(color: Color.fromARGB(255, 0, 0, 0))),
                     ),
@@ -191,11 +201,18 @@ class _CategoriesState extends State<Categories> {
                           child: Container(
                               margin: const EdgeInsets.only(right: 12),
                               child: CupertinoTextField(
-                                placeholder: "Category name",
+                                placeholder: "Goal name",
                                 controller: _textController,
                               ))),
+                      Expanded(
+                          child: Container(
+                              margin: const EdgeInsets.only(right: 12),
+                              child: CupertinoTextField(
+                                placeholder: "Goal Total",
+                                controller: _amountController,
+                              ))),
                       CupertinoButton(
-                        onPressed: createCategory,
+                        onPressed: createGoal,
                         child: const Icon(CupertinoIcons.paperplane_fill),
                       )
                     ],

@@ -3,8 +3,8 @@ import 'dart:async';
 
 import 'package:flutter/cupertino.dart';
 import '../constants.dart';
-import '../models/category.dart';
-import '../models/expense.dart';
+import '../models/goal.dart';
+import '../models/input_goal.dart';
 import '../realm.dart';
 import '../types/recurrence.dart';
 import '../types/widgets.dart';
@@ -13,31 +13,33 @@ import 'package:realm/realm.dart';
 
 var recurrences = List.from(Recurrence.values);
 
-class Add extends WidgetWithTitle {
-  const Add({super.key}) : super(title: "Add");
+class AddGoals extends WidgetWithTitle {
+  const AddGoals({super.key}) : super(title: "Add");
 
   @override
   Widget build(BuildContext context) {
-    return const AddContent();
+    return const AddGoalsContent();
   }
 }
 
-class AddContent extends StatefulWidget {
-  const AddContent({super.key});
+class AddGoalsContent extends StatefulWidget {
+  const AddGoalsContent({super.key});
 
   @override
-  _AddContentState createState() => _AddContentState();
+  _AddGoalsContent createState() => _AddGoalsContent();
 }
 
-class _AddContentState extends State<AddContent> {
+class _AddGoalsContent extends State<AddGoalsContent> {
   late TextEditingController _amountController;
   late TextEditingController _noteController;
-  var realmCategories = realm.all<Category>();
-  StreamSubscription<RealmResultsChanges<Category>>? _categoriesSub;
 
-  List<Category> categories = [];
+  var realmGoals = realm.all<Goal>();
+
+  StreamSubscription<RealmResultsChanges<Goal>>? _goalSub;
+
+  List<Goal> goals = [];
   int _selectedRecurrenceIndex = 0;
-  int _selectedCategoryIndex = 0;
+  int _selectedGoalIndex = 0;
   DateTime _selectedDate = DateTime.now();
   bool canSubmit = false;
 
@@ -47,47 +49,55 @@ class _AddContentState extends State<AddContent> {
 
     _amountController = TextEditingController();
     _noteController = TextEditingController();
-    categories = realmCategories.toList();
-    canSubmit = categories.isNotEmpty && _amountController.text.isNotEmpty;
+    goals = realmGoals.toList();
+    canSubmit = goals.isNotEmpty && _amountController.text.isNotEmpty;
   }
 
   @override
   Future<void> dispose() async {
-    await _categoriesSub?.cancel();
+    await _goalSub?.cancel();
     super.dispose();
   }
 
-  void submitExpense() {
-    realm.write(() => realm.add<Expense>(Expense(
+  void submitGoal() {
+    realm.write(() => realm.add<InputGoal>(InputGoal(
           ObjectId(),
           double.parse(_amountController.value.text),
           _selectedDate,
-          category: categories[_selectedCategoryIndex],
+          goal: goals[_selectedGoalIndex],
           note: _noteController.value.text.isNotEmpty
               ? _noteController.value.text
-              : categories[_selectedCategoryIndex].name,
+              : goals[_selectedGoalIndex].name,
           recurrence: recurrences[_selectedRecurrenceIndex],
         )));
+    final id = goals[_selectedGoalIndex].name;
+    final same = goals[_selectedGoalIndex].colorValue;
+    final total = goals[_selectedGoalIndex].amount;
+    final left = goals[_selectedGoalIndex].savedTot -
+        double.parse(_amountController.value.text);
+
+    var newGoal = Goal(id, same, total, left);
 
     setState(() {
+      realm.write(() => realm.add<Goal>(newGoal, update: true));
       _amountController.clear();
       _selectedRecurrenceIndex = 0;
       _selectedDate = DateTime.now();
       _noteController.clear();
-      _selectedCategoryIndex = 0;
+      _selectedGoalIndex = 0;
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    _categoriesSub ??= realmCategories.changes.listen((event) {
-      categories = event.results.toList();
+    _goalSub ??= realmGoals.changes.listen((event) {
+      goals = event.results.toList();
     });
 
     return CupertinoPageScaffold(
       navigationBar: const CupertinoNavigationBar(
         backgroundColor: Color.fromARGB(0, 0, 0, 0),
-        middle: Text("Add"),
+        middle: Text("Contribute Towards Goal"),
       ),
       child: SafeArea(
         left: true,
@@ -120,7 +130,7 @@ class _AddContentState extends State<AddContent> {
                           controller: _amountController,
                           onChanged: (value) {
                             setState(() => canSubmit =
-                                categories.isNotEmpty && value.isNotEmpty);
+                                goals.isNotEmpty && value.isNotEmpty);
                           },
                           keyboardType: const TextInputType.numberWithOptions(
                             decimal: true,
@@ -220,7 +230,7 @@ class _AddContentState extends State<AddContent> {
                     DecoratedBox(
                       decoration: const BoxDecoration(),
                       child: CupertinoFormRow(
-                        prefix: const Text("Category",
+                        prefix: const Text("Goal",
                             style:
                                 TextStyle(color: Color.fromARGB(255, 0, 0, 0))),
                         helper: null,
@@ -230,7 +240,7 @@ class _AddContentState extends State<AddContent> {
                             context,
                             CupertinoPicker(
                               scrollController: FixedExtentScrollController(
-                                  initialItem: _selectedCategoryIndex),
+                                  initialItem: _selectedGoalIndex),
                               magnification: 1,
                               squeeze: 1.2,
                               useMagnifier: false,
@@ -238,10 +248,10 @@ class _AddContentState extends State<AddContent> {
                               // This is called when selected item is changed.
                               onSelectedItemChanged: (int selectedItem) {
                                 setState(() {
-                                  _selectedCategoryIndex = selectedItem;
+                                  _selectedGoalIndex = selectedItem;
                                 });
                               },
-                              children: List<Widget>.generate(categories.length,
+                              children: List<Widget>.generate(goals.length,
                                   (int index) {
                                 return Container(
                                   padding: const EdgeInsets.symmetric(
@@ -255,10 +265,10 @@ class _AddContentState extends State<AddContent> {
                                           margin: const EdgeInsets.fromLTRB(
                                               0, 0, 8, 0),
                                           decoration: BoxDecoration(
-                                            color: categories[index].color,
+                                            color: goals[index].color,
                                             shape: BoxShape.circle,
                                           )),
-                                      Text(categories[index].name),
+                                      Text(goals[index].name),
                                     ],
                                   ),
                                 );
@@ -266,13 +276,13 @@ class _AddContentState extends State<AddContent> {
                             ),
                           ),
                           child: Text(
-                            categories.isEmpty
+                            goals.isEmpty
                                 ? "Create a category first"
-                                : categories[_selectedCategoryIndex].name,
+                                : goals[_selectedGoalIndex].name,
                             style: TextStyle(
-                              color: categories.isEmpty
+                              color: goals.isEmpty
                                   ? const Color.fromARGB(255, 0, 0, 0)
-                                  : categories[_selectedCategoryIndex].color,
+                                  : goals[_selectedGoalIndex].color,
                             ),
                           ),
                         ),
@@ -282,7 +292,7 @@ class _AddContentState extends State<AddContent> {
                   Container(
                     margin: const EdgeInsets.only(top: 32),
                     child: CupertinoButton(
-                      onPressed: canSubmit ? submitExpense : null,
+                      onPressed: canSubmit ? submitGoal : null,
                       padding: const EdgeInsets.symmetric(
                           horizontal: 20, vertical: 13),
                       color: CupertinoTheme.of(context).primaryColor,
@@ -292,7 +302,7 @@ class _AddContentState extends State<AddContent> {
                       borderRadius: BorderRadius.circular(10),
                       pressedOpacity: 0.7,
                       child: Text(
-                        "Submit expense",
+                        "Submit Contribution",
                         style: TextStyle(
                           color: canSubmit
                               ? const Color.fromARGB(255, 255, 255, 255)
