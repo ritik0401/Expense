@@ -208,9 +208,12 @@ class _GoalsCreateState extends State<GoalsCreate> {
                           child: Container(
                               margin: const EdgeInsets.only(right: 12),
                               child: CupertinoTextField(
-                                placeholder: "Goal Total",
-                                controller: _amountController,
-                              ))),
+                                  placeholder: "Goal Total",
+                                  controller: _amountController,
+                                  keyboardType:
+                                      const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                  )))),
                       CupertinoButton(
                         onPressed: createGoal,
                         child: const Icon(CupertinoIcons.paperplane_fill),

@@ -277,7 +277,7 @@ class _AddGoalsContent extends State<AddGoalsContent> {
                           ),
                           child: Text(
                             goals.isEmpty
-                                ? "Create a category first"
+                                ? "Create a goal first"
                                 : goals[_selectedGoalIndex].name,
                             style: TextStyle(
                               color: goals.isEmpty
